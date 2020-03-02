@@ -4,7 +4,7 @@ import './css/style.css'
 const $ = {}
 window.$ = $
 
-const cars = [
+let cars = [
   {id: 1, title: 'Audi', price: '55123', imgPath: '1'},
   {id: 2, title: 'Chevrolet', price: '30212', imgPath: '2'},
   {id: 3, title: 'Ford', price: '28999', imgPath: '3'},
@@ -82,7 +82,6 @@ $.modal = function(options){
   
   const modal = {
     close(){
-      console.log("CLOSE",       );
       closing = true
       $modal.classList.remove('open')
       $modal.classList.add('hide')
@@ -90,11 +89,14 @@ $.modal = function(options){
       setTimeout(()=>{
         $modal.classList.remove('hide')
         closing = false
+        // modal.destroy()
+        if(typeof options.onClose === 'function'){
+          options.onClose()
+        }
       },500)
     },
     open(){
       if(!destroyed && !closing){
-        console.log("OPEN",       );
         $modal.classList.add('open')
         $modal.addEventListener("click", closeHandler)
       }
@@ -103,13 +105,13 @@ $.modal = function(options){
       $modal.querySelector('[data-content]').innerHTML = html
     },
     destroy(){
+      console.log("destroying",       );
       $modal.remove()
       $modal.removeEventListener("click", closeHandler)
       destroyed = true
     }
   }
   const closeHandler=(e)=>{
-    console.log("closeHandler",       );
     e.target.dataset.close && modal.close()
   }
   
@@ -127,30 +129,59 @@ const priceModal = $.modal({
   ]
 })
 
-document.addEventListener("click", e=>{
-  e.preventDefault()
-  const BtnType = e.target.dataset.btn
-  const id = +e.target.dataset.id
-  const car = cars.find(c=>c.id===id)
- 
-  if(BtnType==='price'){
-    priceModal.setContent(`<p>Цена на ${car.title}: <strong>${car.price}$</strong></p>`)
-    priceModal.open()
-  }else if(BtnType==='remove'){
-    // priceModal.setContent(`<p>Вы удаляете конте ${car.title}: <strong>${car.price}$</strong></p>`)
-    // confirmModal.open()
-  }
-})
-
 $.confirm = function(options){
-  return new Promise((resolve, reject) =>{})
+  return new Promise((resolve, reject) =>{
+    const modal = $.modal({
+      title: options.title,
+      width: '400px',
+      closeable: true,
+      content: options.content,
+      onClose(){
+        modal.destroy()
+      },
+      footerButtons: [
+        {value: 'Cancel', class: ['btn', 'btn-warning', 'btn-lg'], handler(){
+          modal.close()
+            reject()
+        }},
+        {value: 'Delete', class: ['btn', 'btn-danger', 'btn-lg'], handler(){
+          modal.close()
+          resolve()
+        }}
+      ]
+    })
+    setTimeout(()=>{
+      modal.open()
+    },0)
+  })
 }
 
 
 
 
 
-
+document.addEventListener("click", e=>{
+  e.preventDefault()
+  const BtnType = e.target.dataset.btn
+  const id = +e.target.dataset.id
+  const car = cars.find(c=>c.id===id)
+  
+  if(BtnType==='price'){
+    priceModal.setContent(`<p>Цена на ${car.title}: <strong>${car.price}$</strong></p>`)
+    priceModal.open()
+  }else if(BtnType==='remove'){
+    
+    $.confirm({
+      title: 'Are you sure?!',
+      content: `<p>Вы удаляете конте ${car.title}: <strong>${car.price}$</strong></p>`
+    }).then(()=>{
+      cars = cars.filter(f=>f.id!==id)
+      render()
+    }).catch(()=>{
+      console.log("Cancel",       );
+    })
+  }
+})
 
 
 
